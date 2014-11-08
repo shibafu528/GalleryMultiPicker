@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="info_shibafu528_gallerymultipicker_subtitle_limited">
+        <item quantity="one">Left %1$d image</item>
+        <item quantity="other">Left %1$d images</item>
+    </plurals>
+    <plurals name="info_shibafu528_gallerymultipicker_subtitle_unlimited">
+        <item quantity="one">Picked %1$d image</item>
+        <item quantity="other">Picked %1$d images</item>
+    </plurals>
+</resources>

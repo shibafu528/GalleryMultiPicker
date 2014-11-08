@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="info_shibafu528_gallerymultipicker_subtitle_limited">
+        <item quantity="other">あと %1$d 枚選択可能</item>
+    </plurals>
+    <plurals name="info_shibafu528_gallerymultipicker_subtitle_unlimited">
+        <item quantity="other">%1$d 枚選択</item>
+    </plurals>
+</resources>

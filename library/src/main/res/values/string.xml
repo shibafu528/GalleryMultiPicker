@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="info_shibafu528_gallerymultipicker_title">Pick Image(s)</string>
+    <string name="info_shibafu528_gallerymultipicker_subtitle_limited_zero">Left 0 image</string>
+    <string name="info_shibafu528_gallerymultipicker_subtitle_unlimited_zero">No image</string>
+    <string name="info_shibafu528_gallerymultipicker_all_images">All Images</string>
+    <string name="info_shibafu528_gallerymultipicker_action_decide">Decide</string>
+    <string name="info_shibafu528_gallerymultipicker_action_gallery">Open gallery</string>
+    <string name="info_shibafu528_gallerymultipicker_action_take_a_photo">Take a photo</string>
+    <string name="info_shibafu528_gallerymultipicker_storage_error">External storage is unavailable. Can\'t use this function.</string>
+    <string name="info_shibafu528_gallerymultipicker_gallery_error">Can\'t access selected picture.</string>
+    <string name="info_shibafu528_gallerymultipicker_camera_error">Can\'t access took picture.</string>
+</resources>
