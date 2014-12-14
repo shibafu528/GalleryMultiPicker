@@ -45,7 +45,6 @@ import android.support.v4.app.ListFragment;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBarActivity;
 import android.text.TextUtils;
-import android.util.Pair;
 import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -367,6 +366,7 @@ public class MultiPickerActivity extends ActionBarActivity{
                 MediaStore.Images.ImageColumns.BUCKET_ID,
                 MediaStore.Images.ImageColumns.BUCKET_DISPLAY_NAME,
                 MediaStore.Images.ImageColumns.DATA,
+                MediaStore.Images.ImageColumns.ORIENTATION,
                 "COUNT(*)"
         };
 
@@ -383,9 +383,10 @@ public class MultiPickerActivity extends ActionBarActivity{
             ViewHolder vh = new ViewHolder(view);
             if (cursor.moveToFirst()) {
                 long id = cursor.getLong(cursor.getColumnIndex(MediaStore.Images.Media._ID));
+                int orientation = cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns.ORIENTATION));
                 vh.imageView.setTag(String.valueOf(id));
                 vh.imageView.setImageResource(android.R.drawable.ic_popup_sync);
-                new ThumbnailAsyncTask(vh.imageView).executeParallel(new Pair<>(resolver, id));
+                new ThumbnailAsyncTask(vh.imageView).executeParallel(new ThumbnailAsyncTask.ThumbParam(resolver, id, orientation));
             } else {
                 vh.imageView.setImageResource(android.R.drawable.gallery_thumb);
             }
@@ -455,9 +456,10 @@ public class MultiPickerActivity extends ActionBarActivity{
 
             public void bindExistView(ViewHolder vh, Context context, Cursor cursor) {
                 long id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns._ID));
+                int orientation = cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns.ORIENTATION));
                 vh.imageView.setTag(String.valueOf(id));
                 vh.imageView.setImageResource(android.R.drawable.ic_popup_sync);
-                new ThumbnailAsyncTask(vh.imageView).executeParallel(new Pair<>(resolver, id));
+                new ThumbnailAsyncTask(vh.imageView).executeParallel(new ThumbnailAsyncTask.ThumbParam(resolver, id, orientation));
                 vh.title.setText(cursor.getString(cursor.getColumnIndex(MediaStore.Images.ImageColumns.BUCKET_DISPLAY_NAME)));
                 vh.count.setText(cursor.getString(cursor.getColumnIndex("COUNT(*)")));
             }
@@ -574,9 +576,10 @@ public class MultiPickerActivity extends ActionBarActivity{
 
             public void bindExistView(ViewHolder vh, Context context, Cursor cursor) {
                 long id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID));
+                int orientation = cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns.ORIENTATION));
                 vh.imageView.setTag(String.valueOf(id));
                 vh.imageView.setImageResource(android.R.drawable.ic_popup_sync);
-                new ThumbnailAsyncTask(vh.imageView).executeParallel(new Pair<>(resolver, id));
+                new ThumbnailAsyncTask(vh.imageView).executeParallel(new ThumbnailAsyncTask.ThumbParam(resolver, id, orientation));
                 vh.maskView.setVisibility(((MultiPickerActivity) getActivity()).getSelectedIds().contains(id) ? View.VISIBLE : View.INVISIBLE);
             }
 

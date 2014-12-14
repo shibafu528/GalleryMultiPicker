@@ -27,14 +27,26 @@ package info.shibafu528.gallerymultipicker;
 import android.content.ContentResolver;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
 import android.provider.MediaStore;
 import android.support.v4.util.LruCache;
-import android.util.Pair;
 import android.widget.ImageView;
 
 import java.lang.ref.WeakReference;
 
-class ThumbnailAsyncTask extends ParallelAsyncTask<Pair<ContentResolver, Long>, Void, Bitmap> {
+class ThumbnailAsyncTask extends ParallelAsyncTask<ThumbnailAsyncTask.ThumbParam, Void, Bitmap> {
+    public static class ThumbParam {
+        private ContentResolver resolver;
+        private long id;
+        private int orientation;
+
+        public ThumbParam(ContentResolver resolver, long id, int orientation) {
+            this.resolver = resolver;
+            this.id = id;
+            this.orientation = orientation;
+        }
+    }
+
     private static LruCache<Long, Bitmap> cache = new LruCache<Long, Bitmap>(16*1024*1024) {
         @Override
         protected int sizeOf(Long key, Bitmap value) {
@@ -63,12 +75,15 @@ class ThumbnailAsyncTask extends ParallelAsyncTask<Pair<ContentResolver, Long>, 
     }
 
     @Override
-    protected Bitmap doInBackground(Pair<ContentResolver, Long>... params) {
-        Bitmap bitmap = cache.get(params[0].second);
+    protected Bitmap doInBackground(ThumbParam... params) {
+        Bitmap bitmap = cache.get(params[0].id);
         if (bitmap == null) {
-            bitmap = MediaStore.Images.Thumbnails.getThumbnail(params[0].first, params[0].second, MediaStore.Images.Thumbnails.MINI_KIND, options);
+            bitmap = MediaStore.Images.Thumbnails.getThumbnail(params[0].resolver, params[0].id, MediaStore.Images.Thumbnails.MINI_KIND, options);
+            Matrix matrix = new Matrix();
+            matrix.setRotate(params[0].orientation);
+            bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
             if (bitmap != null) {
-                cache.put(params[0].second, bitmap);
+                cache.put(params[0].id, bitmap);
             }
         }
         return bitmap;
