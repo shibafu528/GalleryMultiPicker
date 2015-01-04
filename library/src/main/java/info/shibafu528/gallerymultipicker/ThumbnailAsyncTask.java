@@ -79,10 +79,10 @@ class ThumbnailAsyncTask extends ParallelAsyncTask<ThumbnailAsyncTask.ThumbParam
         Bitmap bitmap = cache.get(params[0].id);
         if (bitmap == null) {
             bitmap = MediaStore.Images.Thumbnails.getThumbnail(params[0].resolver, params[0].id, MediaStore.Images.Thumbnails.MINI_KIND, options);
-            Matrix matrix = new Matrix();
-            matrix.setRotate(params[0].orientation);
-            bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
             if (bitmap != null) {
+                Matrix matrix = new Matrix();
+                matrix.setRotate(params[0].orientation);
+                bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
                 cache.put(params[0].id, bitmap);
             }
         }
