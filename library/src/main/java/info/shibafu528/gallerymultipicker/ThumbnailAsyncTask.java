@@ -28,6 +28,7 @@ import android.content.ContentResolver;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
+import android.os.Build;
 import android.provider.MediaStore;
 import android.support.v4.util.LruCache;
 import android.widget.ImageView;
@@ -47,7 +48,7 @@ class ThumbnailAsyncTask extends ParallelAsyncTask<ThumbnailAsyncTask.ThumbParam
         }
     }
 
-    private static LruCache<Long, Bitmap> cache = new LruCache<Long, Bitmap>(16*1024*1024) {
+    private static LruCache<Long, Bitmap> cache = new LruCache<Long, Bitmap>((Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB)? 4*1024*1024 : 16*1024*1024) {
         @Override
         protected int sizeOf(Long key, Bitmap value) {
             return value.getRowBytes() * value.getHeight();
