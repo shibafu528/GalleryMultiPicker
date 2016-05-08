@@ -387,9 +387,8 @@ public class MultiPickerActivity extends ActionBarActivity{
             if (cursor.moveToFirst()) {
                 long id = cursor.getLong(cursor.getColumnIndex(MediaStore.Images.Media._ID));
                 int orientation = cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns.ORIENTATION));
-                vh.imageView.setTag(String.valueOf(id));
                 vh.imageView.setImageResource(android.R.drawable.ic_popup_sync);
-                new ThumbnailAsyncTask(vh.imageView).executeParallel(new ThumbnailAsyncTask.ThumbParam(resolver, id, orientation));
+                ThumbnailAsyncTask.execute(vh.imageView, String.valueOf(id), new ThumbnailAsyncTask.ThumbParam(resolver, id, orientation));
             } else {
                 vh.imageView.setImageResource(android.R.drawable.gallery_thumb);
             }
@@ -460,9 +459,8 @@ public class MultiPickerActivity extends ActionBarActivity{
             public void bindExistView(ViewHolder vh, Context context, Cursor cursor) {
                 long id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns._ID));
                 int orientation = cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns.ORIENTATION));
-                vh.imageView.setTag(String.valueOf(id));
                 vh.imageView.setImageResource(android.R.drawable.ic_popup_sync);
-                new ThumbnailAsyncTask(vh.imageView).executeParallel(new ThumbnailAsyncTask.ThumbParam(resolver, id, orientation));
+                ThumbnailAsyncTask.execute(vh.imageView, String.valueOf(id), new ThumbnailAsyncTask.ThumbParam(resolver, id, orientation));
                 vh.title.setText(cursor.getString(cursor.getColumnIndex(MediaStore.Images.ImageColumns.BUCKET_DISPLAY_NAME)));
                 vh.count.setText(cursor.getString(cursor.getColumnIndex("COUNT(*)")));
             }
@@ -580,9 +578,8 @@ public class MultiPickerActivity extends ActionBarActivity{
             public void bindExistView(ViewHolder vh, Context context, Cursor cursor) {
                 long id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID));
                 int orientation = cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns.ORIENTATION));
-                vh.imageView.setTag(String.valueOf(id));
                 vh.imageView.setImageResource(android.R.drawable.ic_popup_sync);
-                new ThumbnailAsyncTask(vh.imageView).executeParallel(new ThumbnailAsyncTask.ThumbParam(resolver, id, orientation));
+                ThumbnailAsyncTask.execute(vh.imageView, String.valueOf(id), new ThumbnailAsyncTask.ThumbParam(resolver, id, orientation));
                 vh.maskView.setVisibility(((MultiPickerActivity) getActivity()).getSelectedIds().contains(id) ? View.VISIBLE : View.INVISIBLE);
             }
 

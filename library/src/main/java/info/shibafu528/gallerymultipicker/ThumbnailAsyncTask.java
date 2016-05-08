@@ -30,7 +30,9 @@ import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.os.Build;
 import android.provider.MediaStore;
+import android.support.annotation.NonNull;
 import android.support.v4.util.LruCache;
+import android.util.Log;
 import android.widget.ImageView;
 
 import java.lang.ref.WeakReference;
@@ -64,15 +66,10 @@ class ThumbnailAsyncTask extends ParallelAsyncTask<ThumbnailAsyncTask.ThumbParam
         options.inPurgeable = true;
     }
 
-    @Override
-    protected void finalize() throws Throwable {
-        cache.evictAll();
-        super.finalize();
-    }
-
-    ThumbnailAsyncTask(ImageView imageView) {
+    ThumbnailAsyncTask(ImageView imageView, String tag) {
         this.imageView = new WeakReference<>(imageView);
-        this.tag = (String) imageView.getTag();
+        this.tag = tag;
+        imageView.setTag(this);
     }
 
     @Override
@@ -93,8 +90,22 @@ class ThumbnailAsyncTask extends ParallelAsyncTask<ThumbnailAsyncTask.ThumbParam
     @Override
     protected void onPostExecute(Bitmap bitmap) {
         ImageView imageView = this.imageView != null ? this.imageView.get() : null;
-        if (imageView != null && tag.equals(imageView.getTag())) {
+        if (imageView != null && imageView.getTag() == this) {
             imageView.setImageBitmap(bitmap);
         }
+    }
+
+    static void execute(@NonNull ImageView imageView, String tag, ThumbParam param) {
+        if (imageView.getTag() != null) {
+            ThumbnailAsyncTask asyncTask = (ThumbnailAsyncTask) imageView.getTag();
+            if (tag.equals(asyncTask.tag)) {
+                // 同じタスクなら何もしない
+                return;
+            }
+            // 以前のタスクをキャンセル
+            asyncTask.cancel(true);
+        }
+        // 新しいタスクを実行
+        new ThumbnailAsyncTask(imageView, tag).executeParallel(param);
     }
 }
