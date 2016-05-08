@@ -31,6 +31,7 @@ import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -43,6 +44,7 @@ import android.support.annotation.StringDef;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.ListFragment;
+import android.support.v4.util.LruCache;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBarActivity;
 import android.text.TextUtils;
@@ -100,6 +102,13 @@ public class MultiPickerActivity extends ActionBarActivity{
     private Uri mCameraTemp;
 
     private LongArray mSelectedIds = new LongArray();
+
+    private LruCache<Long, Bitmap> mThumbnailCache = new LruCache<Long, Bitmap>((Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB)? 4*1024*1024 : 16*1024*1024) {
+        @Override
+        protected int sizeOf(Long key, Bitmap value) {
+            return value.getRowBytes() * value.getHeight();
+        }
+    };
 
     public static Intent newIntent(Context packageContext,
                                    int pickLimit) {
@@ -297,6 +306,12 @@ public class MultiPickerActivity extends ActionBarActivity{
     }
 
     @Override
+    protected void onStop() {
+        super.onStop();
+        mThumbnailCache.evictAll();
+    }
+
+    @Override
     public void finish() {
         super.finish();
         if (mOverrideTransition) {
@@ -355,6 +370,10 @@ public class MultiPickerActivity extends ActionBarActivity{
         return uris;
     }
 
+    public LruCache<Long, Bitmap> getThumbnailCache() {
+        return mThumbnailCache;
+    }
+
     public void toggleSelect(long id) {
         if (mSelectedIds.contains(id)) {
             mSelectedIds.remove(id);
@@ -388,7 +407,9 @@ public class MultiPickerActivity extends ActionBarActivity{
                 long id = cursor.getLong(cursor.getColumnIndex(MediaStore.Images.Media._ID));
                 int orientation = cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns.ORIENTATION));
                 vh.imageView.setImageResource(android.R.drawable.ic_popup_sync);
-                ThumbnailAsyncTask.execute(vh.imageView, String.valueOf(id), new ThumbnailAsyncTask.ThumbParam(resolver, id, orientation));
+                ThumbnailAsyncTask.execute(vh.imageView, String.valueOf(id),
+                        ((MultiPickerActivity) getActivity()).getThumbnailCache(),
+                        new ThumbnailAsyncTask.ThumbParam(resolver, id, orientation));
             } else {
                 vh.imageView.setImageResource(android.R.drawable.gallery_thumb);
             }
@@ -460,7 +481,9 @@ public class MultiPickerActivity extends ActionBarActivity{
                 long id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns._ID));
                 int orientation = cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns.ORIENTATION));
                 vh.imageView.setImageResource(android.R.drawable.ic_popup_sync);
-                ThumbnailAsyncTask.execute(vh.imageView, String.valueOf(id), new ThumbnailAsyncTask.ThumbParam(resolver, id, orientation));
+                ThumbnailAsyncTask.execute(vh.imageView, String.valueOf(id),
+                        ((MultiPickerActivity) getActivity()).getThumbnailCache(),
+                        new ThumbnailAsyncTask.ThumbParam(resolver, id, orientation));
                 vh.title.setText(cursor.getString(cursor.getColumnIndex(MediaStore.Images.ImageColumns.BUCKET_DISPLAY_NAME)));
                 vh.count.setText(cursor.getString(cursor.getColumnIndex("COUNT(*)")));
             }
@@ -579,7 +602,9 @@ public class MultiPickerActivity extends ActionBarActivity{
                 long id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID));
                 int orientation = cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns.ORIENTATION));
                 vh.imageView.setImageResource(android.R.drawable.ic_popup_sync);
-                ThumbnailAsyncTask.execute(vh.imageView, String.valueOf(id), new ThumbnailAsyncTask.ThumbParam(resolver, id, orientation));
+                ThumbnailAsyncTask.execute(vh.imageView, String.valueOf(id),
+                        ((MultiPickerActivity) getActivity()).getThumbnailCache(),
+                        new ThumbnailAsyncTask.ThumbParam(resolver, id, orientation));
                 vh.maskView.setVisibility(((MultiPickerActivity) getActivity()).getSelectedIds().contains(id) ? View.VISIBLE : View.INVISIBLE);
             }
 
