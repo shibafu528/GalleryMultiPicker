@@ -42,6 +42,7 @@ import android.support.annotation.AnimRes;
 import android.support.annotation.Nullable;
 import android.support.annotation.StringDef;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.ListFragment;
 import android.support.v4.util.LruCache;
@@ -103,12 +104,7 @@ public class MultiPickerActivity extends ActionBarActivity{
 
     private LongArray mSelectedIds = new LongArray();
 
-    private LruCache<Long, Bitmap> mThumbnailCache = new LruCache<Long, Bitmap>((Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB)? 4*1024*1024 : 16*1024*1024) {
-        @Override
-        protected int sizeOf(Long key, Bitmap value) {
-            return value.getRowBytes() * value.getHeight();
-        }
-    };
+    private LruCache<Long, Bitmap> mThumbnailCache;
 
     public static Intent newIntent(Context packageContext,
                                    int pickLimit) {
@@ -192,6 +188,27 @@ public class MultiPickerActivity extends ActionBarActivity{
         }
         mPickLimit = getIntent().getIntExtra(EXTRA_PICK_LIMIT, PICK_LIMIT_INFINITY);
         updateLimitCount();
+
+        {
+            ThumbnailCacheFragment fragment = ThumbnailCacheFragment.findOrCreateFragment(getSupportFragmentManager());
+            mThumbnailCache = fragment.mThumbnailCache;
+            if (mThumbnailCache == null) {
+                final int maxMemorySize;
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB) {
+                    maxMemorySize = 4;
+                } else {
+                    maxMemorySize = 16;
+                }
+
+                mThumbnailCache = new LruCache<Long, Bitmap>(maxMemorySize * 1024 * 1024) {
+                    @Override
+                    protected int sizeOf(Long key, Bitmap value) {
+                        return value.getRowBytes() * value.getHeight();
+                    }
+                };
+                fragment.mThumbnailCache = mThumbnailCache;
+            }
+        }
     }
 
     @Override
@@ -303,12 +320,6 @@ public class MultiPickerActivity extends ActionBarActivity{
                 break;
             }
         }
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        mThumbnailCache.evictAll();
     }
 
     @Override
@@ -618,6 +629,25 @@ public class MultiPickerActivity extends ActionBarActivity{
                     v.setTag(this);
                 }
             }
+        }
+    }
+
+    public static class ThumbnailCacheFragment extends Fragment {
+        public static final String TAG = "ThumbnailCache";
+
+        public LruCache<Long, Bitmap> mThumbnailCache;
+
+        public ThumbnailCacheFragment() {
+            setRetainInstance(true);
+        }
+
+        public static ThumbnailCacheFragment findOrCreateFragment(FragmentManager manager) {
+            ThumbnailCacheFragment fragment = (ThumbnailCacheFragment) manager.findFragmentByTag(TAG);
+            if (fragment == null) {
+                fragment = new ThumbnailCacheFragment();
+                manager.beginTransaction().add(fragment, TAG).commit();
+            }
+            return fragment;
         }
     }
 
