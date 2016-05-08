@@ -39,6 +39,7 @@ import android.os.Parcelable;
 import android.provider.MediaStore;
 import android.support.annotation.AnimRes;
 import android.support.annotation.Nullable;
+import android.support.annotation.StringDef;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.ListFragment;
@@ -62,6 +63,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.File;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -79,6 +82,9 @@ public class MultiPickerActivity extends ActionBarActivity{
     public static final String EXTRA_CLOSE_ENTER_ANIMATION  = "close_enter_anim";
     public static final String EXTRA_CLOSE_EXIT_ANIMATION   = "close_exit_anim";
 
+    @Retention(RetentionPolicy.SOURCE)
+    @StringDef({ICON_THEME_DARK, ICON_THEME_LIGHT})
+    public @interface IconTheme{}
     public static final String ICON_THEME_DARK  = "dark";
     public static final String ICON_THEME_LIGHT = "light";
 
@@ -114,7 +120,7 @@ public class MultiPickerActivity extends ActionBarActivity{
     public static Intent newIntent(Context packageContext,
                                    int pickLimit,
                                    @Nullable String cameraDestDir,
-                                   String menuIconTheme) {
+                                   @IconTheme String menuIconTheme) {
         Intent intent = new Intent(packageContext, MultiPickerActivity.class);
         intent.putExtra(EXTRA_PICK_LIMIT, pickLimit);
         intent.putExtra(EXTRA_CAMERA_DEST_DIR, cameraDestDir);
@@ -125,7 +131,7 @@ public class MultiPickerActivity extends ActionBarActivity{
     public static Intent newIntent(Context packageContext,
                                    int pickLimit,
                                    @Nullable String cameraDestDir,
-                                   String menuIconTheme,
+                                   @IconTheme String menuIconTheme,
                                    @AnimRes int closeEnterAnimationRes,
                                    @AnimRes int closeExitAnimationRes) {
         Intent intent = new Intent(packageContext, MultiPickerActivity.class);
@@ -194,19 +200,12 @@ public class MultiPickerActivity extends ActionBarActivity{
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.info_shibafu528_gallerymultipicker_menu, menu);
-
-        MenuItem gallery = menu.findItem(R.id.info_shibafu528_gallerymultipicker_action_gallery);
-        MenuItem shot = menu.findItem(R.id.info_shibafu528_gallerymultipicker_action_take_a_photo);
-
         if (mMenuIconTheme != null) switch (mMenuIconTheme.toLowerCase()) {
             case ICON_THEME_LIGHT:
-                gallery.setIcon(R.drawable.info_shibafu528_gallerymultipicker_ic_action_gallery_light);
-                shot.setIcon(R.drawable.info_shibafu528_gallerymultipicker_ic_action_take_shot_light);
+                getMenuInflater().inflate(R.menu.info_shibafu528_gallerymultipicker_menu_light, menu);
                 break;
             case ICON_THEME_DARK:
-                gallery.setIcon(R.drawable.info_shibafu528_gallerymultipicker_ic_action_gallery_dark);
-                shot.setIcon(R.drawable.info_shibafu528_gallerymultipicker_ic_action_take_shot_dark);
+                getMenuInflater().inflate(R.menu.info_shibafu528_gallerymultipicker_menu_dark, menu);
                 break;
         }
         return true;
@@ -283,10 +282,14 @@ public class MultiPickerActivity extends ActionBarActivity{
                 } else if (resultCode == RESULT_CANCELED) {
                     Cursor c = getContentResolver().query(mCameraTemp,
                             new String[]{MediaStore.Images.Media.DATA}, null, null, null);
-                    c.moveToFirst();
-                    getContentResolver().delete(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                            MediaStore.Images.Media.DATA + "=?",
-                            new String[]{c.getString(0)});
+                    if (c != null) {
+                        if (c.moveToFirst()) {
+                            getContentResolver().delete(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                                    MediaStore.Images.Media.DATA + "=?",
+                                    new String[]{c.getString(0)});
+                        }
+                        c.close();
+                    }
                 }
                 break;
             }
