@@ -29,19 +29,18 @@ import android.content.Intent;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.v7.app.ActionBarActivity;
+import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
+import info.shibafu528.gallerymultipicker.MultiPickerActivity;
 
 import java.io.FileNotFoundException;
 
-import info.shibafu528.gallerymultipicker.MultiPickerActivity;
-
-public class SampleActivity extends ActionBarActivity{
+public class SampleActivity extends AppCompatActivity {
     private static final int REQUEST_PICK = 1;
 
     private ListView mListView;

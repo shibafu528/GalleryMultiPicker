@@ -1,6 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent"
-    android:id="@android:id/content">
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent">
 
-</FrameLayout>
+    <FrameLayout
+        android:id="@+id/info_shibafu528_gallerymultipicker_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
+    <android.support.design.widget.FloatingActionButton
+        style="@style/GalleryMultiPicker_FabStyle"
+        android:id="@+id/info_shibafu528_gallerymultipicker_action_gallery"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentBottom="true"
+        app:srcCompat="@drawable/info_shibafu528_gallerymultipicker_ic_collections"
+        app:backgroundTint="@android:color/white"
+        app:fabSize="normal"
+        app:borderWidth="0dp"/>
+
+    <android.support.design.widget.FloatingActionButton
+        style="@style/GalleryMultiPicker_FabStyle"
+        android:id="@+id/info_shibafu528_gallerymultipicker_action_camera"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_above="@id/info_shibafu528_gallerymultipicker_action_gallery"
+        app:srcCompat="@drawable/info_shibafu528_gallerymultipicker_ic_camera"
+        app:backgroundTint="@android:color/white"
+        app:fabSize="normal"
+        app:borderWidth="0dp"/>
+
+    <android.support.design.widget.FloatingActionButton
+        style="@style/GalleryMultiPicker_FabStyle"
+        android:id="@+id/info_shibafu528_gallerymultipicker_action_done"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentBottom="true"
+        android:visibility="gone"
+        app:srcCompat="@drawable/info_shibafu528_gallerymultipicker_ic_done"
+        app:backgroundTint="?attr/colorAccent"
+        app:fabSize="normal"
+        app:borderWidth="0dp"/>
+
+</RelativeLayout>

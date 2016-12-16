@@ -41,17 +41,17 @@ import android.provider.MediaStore;
 import android.support.annotation.AnimRes;
 import android.support.annotation.Nullable;
 import android.support.annotation.StringDef;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.ListFragment;
 import android.support.v4.util.LruCache;
 import android.support.v7.app.ActionBar;
-import android.support.v7.app.ActionBarActivity;
+import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.view.Display;
 import android.view.LayoutInflater;
-import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -73,9 +73,12 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-public class MultiPickerActivity extends ActionBarActivity{
+public class MultiPickerActivity extends AppCompatActivity {
     private static final int REQUEST_GALLERY    = 0;
     private static final int REQUEST_CAMERA     = 1;
+
+    private static final String STATE_SELECTED_IDS = "mSelectedIds";
+    private static final String STATE_CAMERA_TEMP = "mCameraTemp";
 
     public static final String EXTRA_PICK_LIMIT             = "max";
     public static final String EXTRA_CAMERA_DEST_DIR        = "camera_dest_dir";
@@ -92,6 +95,10 @@ public class MultiPickerActivity extends ActionBarActivity{
     public static final String ICON_THEME_LIGHT = "light";
 
     public static final int PICK_LIMIT_INFINITY = -1;
+
+    private FloatingActionButton mGalleryFab;
+    private FloatingActionButton mCameraFab;
+    private FloatingActionButton mDoneFab;
 
     private String mMenuIconTheme = null;
     private boolean mOverrideTransition;
@@ -165,6 +172,7 @@ public class MultiPickerActivity extends ActionBarActivity{
             if (themeResId > -1) {
                 setTheme(themeResId);
             }
+            mPickLimit = intent.getIntExtra(EXTRA_PICK_LIMIT, PICK_LIMIT_INFINITY);
             mCameraDestDir = intent.getStringExtra(EXTRA_CAMERA_DEST_DIR);
             mMenuIconTheme = intent.getStringExtra(EXTRA_ICON_THEME);
             mCloseEnterAnimation = intent.getIntExtra(EXTRA_CLOSE_ENTER_ANIMATION, 0);
@@ -177,16 +185,64 @@ public class MultiPickerActivity extends ActionBarActivity{
         }
         super.onCreate(savedInstanceState);
         setContentView(R.layout.info_shibafu528_gallerymultipicker_container);
+
         ActionBar actionBar = getSupportActionBar();
         actionBar.setDisplayHomeAsUpEnabled(true);
         actionBar.setDisplayShowHomeEnabled(false);
         actionBar.setTitle(R.string.info_shibafu528_gallerymultipicker_title);
         if (savedInstanceState == null) {
             getSupportFragmentManager().beginTransaction()
-                    .replace(android.R.id.content, new AlbumFragment())
+                    .replace(R.id.info_shibafu528_gallerymultipicker_container, new AlbumFragment())
                     .commit();
+        } else {
+            mSelectedIds.addAll(savedInstanceState.getLongArray(STATE_SELECTED_IDS));
+            mCameraTemp = savedInstanceState.getParcelable(STATE_CAMERA_TEMP);
         }
-        mPickLimit = getIntent().getIntExtra(EXTRA_PICK_LIMIT, PICK_LIMIT_INFINITY);
+
+        mGalleryFab = (FloatingActionButton) findViewById(R.id.info_shibafu528_gallerymultipicker_action_gallery);
+        mGalleryFab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT ? Intent.ACTION_PICK : Intent.ACTION_GET_CONTENT);
+                intent.setType("image/*");
+                startActivityForResult(intent, REQUEST_GALLERY);
+            }
+        });
+        mCameraFab = (FloatingActionButton) findViewById(R.id.info_shibafu528_gallerymultipicker_action_camera);
+        mCameraFab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                boolean existExternal = Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED);
+                if (!existExternal) {
+                    Toast.makeText(MultiPickerActivity.this, R.string.info_shibafu528_gallerymultipicker_storage_error, Toast.LENGTH_SHORT).show();
+                } else {
+                    File extDestDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM),
+                            mCameraDestDir != null ? mCameraDestDir : "Camera");
+                    if (!extDestDir.exists()) {
+                        extDestDir.mkdirs();
+                    }
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss");
+                    String fileName = sdf.format(new Date(System.currentTimeMillis()));
+                    File destFile = new File(extDestDir.getPath(), fileName + ".jpg");
+                    ContentValues values = new ContentValues();
+                    values.put(MediaStore.Images.Media.TITLE, fileName);
+                    values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+                    values.put(MediaStore.Images.Media.DATA, destFile.getPath());
+                    mCameraTemp = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+                    Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                    intent.putExtra(MediaStore.EXTRA_OUTPUT, mCameraTemp);
+                    startActivityForResult(intent, REQUEST_CAMERA);
+                }
+            }
+        });
+        mDoneFab = (FloatingActionButton) findViewById(R.id.info_shibafu528_gallerymultipicker_action_done);
+        mDoneFab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                accept(getSelectedUris());
+            }
+        });
+
         updateLimitCount();
 
         {
@@ -214,27 +270,8 @@ public class MultiPickerActivity extends ActionBarActivity{
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putLongArray(EXTRA_URIS, mSelectedIds.toPrimitive());
-    }
-
-    @Override
-    protected void onRestoreInstanceState(Bundle savedInstanceState) {
-        super.onRestoreInstanceState(savedInstanceState);
-        mSelectedIds.addAll(savedInstanceState.getLongArray(EXTRA_URIS));
-        updateLimitCount();
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        if (mMenuIconTheme != null) switch (mMenuIconTheme.toLowerCase()) {
-            case ICON_THEME_LIGHT:
-                getMenuInflater().inflate(R.menu.info_shibafu528_gallerymultipicker_menu_light, menu);
-                break;
-            case ICON_THEME_DARK:
-                getMenuInflater().inflate(R.menu.info_shibafu528_gallerymultipicker_menu_dark, menu);
-                break;
-        }
-        return true;
+        outState.putLongArray(STATE_SELECTED_IDS, mSelectedIds.toPrimitive());
+        outState.putParcelable(STATE_CAMERA_TEMP, mCameraTemp);
     }
 
     @Override
@@ -247,35 +284,6 @@ public class MultiPickerActivity extends ActionBarActivity{
             } else {
                 setResult(RESULT_CANCELED);
                 finish();
-            }
-        } else if (id == R.id.info_shibafu528_gallerymultipicker_action_decide) {
-            accept(getSelectedUris());
-        } else if (id == R.id.info_shibafu528_gallerymultipicker_action_gallery) {
-            Intent intent = new Intent(Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT ? Intent.ACTION_PICK : Intent.ACTION_GET_CONTENT);
-            intent.setType("image/*");
-            startActivityForResult(intent, REQUEST_GALLERY);
-        } else if (id == R.id.info_shibafu528_gallerymultipicker_action_take_a_photo) {
-            boolean existExternal = Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED);
-            if (!existExternal) {
-                Toast.makeText(this, R.string.info_shibafu528_gallerymultipicker_storage_error, Toast.LENGTH_SHORT).show();
-                return true;
-            } else {
-                File extDestDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM),
-                        mCameraDestDir != null ? mCameraDestDir : "Camera");
-                if (!extDestDir.exists()) {
-                    extDestDir.mkdirs();
-                }
-                SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss");
-                String fileName = sdf.format(new Date(System.currentTimeMillis()));
-                File destFile = new File(extDestDir.getPath(), fileName + ".jpg");
-                ContentValues values = new ContentValues();
-                values.put(MediaStore.Images.Media.TITLE, fileName);
-                values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
-                values.put(MediaStore.Images.Media.DATA, destFile.getPath());
-                mCameraTemp = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
-                Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                intent.putExtra(MediaStore.EXTRA_OUTPUT, mCameraTemp);
-                startActivityForResult(intent, REQUEST_CAMERA);
             }
         }
         return true;
@@ -358,6 +366,23 @@ public class MultiPickerActivity extends ActionBarActivity{
                     R.string.info_shibafu528_gallerymultipicker_subtitle_limited_zero,
                     getPickLimit() - getSelectedIds().size()
             ));
+        }
+        if (mSelectedIds.isEmpty()) {
+            mDoneFab.hide(new FloatingActionButton.OnVisibilityChangedListener() {
+                @Override
+                public void onHidden(FloatingActionButton fab) {
+                    mGalleryFab.show();
+                    mCameraFab.show();
+                }
+            });
+        } else {
+            mGalleryFab.hide();
+            mCameraFab.hide(new FloatingActionButton.OnVisibilityChangedListener() {
+                @Override
+                public void onHidden(FloatingActionButton fab) {
+                    mDoneFab.show();
+                }
+            });
         }
     }
 
@@ -460,7 +485,7 @@ public class MultiPickerActivity extends ActionBarActivity{
                             R.anim.info_shibafu528_gallerymultipicker_open_exit,
                             R.anim.info_shibafu528_gallerymultipicker_close_enter,
                             R.anim.info_shibafu528_gallerymultipicker_close_exit)
-                    .replace(android.R.id.content, GridFragment.newInstance(bucketId))
+                    .replace(R.id.info_shibafu528_gallerymultipicker_container, GridFragment.newInstance(bucketId))
                     .addToBackStack(null)
                     .commit();
         }
