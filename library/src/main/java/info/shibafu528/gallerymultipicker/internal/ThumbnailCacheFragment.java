@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2014 shibafu
+ * Copyright (c) 2016 shibafu
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,24 +22,28 @@
  * THE SOFTWARE.
  */
 
-package info.shibafu528.gallerymultipicker;
+package info.shibafu528.gallerymultipicker.internal;
 
-import android.os.AsyncTask;
-import android.os.Build;
+import android.graphics.Bitmap;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.util.LruCache;
 
-import java.util.concurrent.RejectedExecutionException;
+public class ThumbnailCacheFragment extends Fragment {
+    public static final String TAG = "ThumbnailCache";
 
-abstract class ParallelAsyncTask<Params, Progress, Result> extends AsyncTask<Params, Progress, Result> {
-    public void executeParallel(Params... params) {
-        if (getStatus() == Status.RUNNING && !isCancelled()) return;
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-                this.executeOnExecutor(THREAD_POOL_EXECUTOR, params);
-            } else {
-                this.execute(params);
-            }
-        } catch (RejectedExecutionException e) {
-            executeParallel(params);
+    public LruCache<Long, Bitmap> mThumbnailCache;
+
+    public ThumbnailCacheFragment() {
+        setRetainInstance(true);
+    }
+
+    public static ThumbnailCacheFragment findOrCreateFragment(FragmentManager manager) {
+        ThumbnailCacheFragment fragment = (ThumbnailCacheFragment) manager.findFragmentByTag(TAG);
+        if (fragment == null) {
+            fragment = new ThumbnailCacheFragment();
+            manager.beginTransaction().add(fragment, TAG).commit();
         }
+        return fragment;
     }
 }
