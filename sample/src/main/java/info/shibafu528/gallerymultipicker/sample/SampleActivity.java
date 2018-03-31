@@ -44,6 +44,7 @@ public class SampleActivity extends AppCompatActivity {
     private static final int REQUEST_PICK = 1;
 
     private ListView mListView;
+    private Uri[] mPickedUris;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,8 +73,23 @@ public class SampleActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_PICK && resultCode == RESULT_OK) {
-            Uri[] pickedUris = MultiPickerActivity.getPickedUris(data);
-            mListView.setAdapter(new ImageAdapter(this, pickedUris));
+            mPickedUris = MultiPickerActivity.getPickedUris(data);
+            mListView.setAdapter(new ImageAdapter(this, mPickedUris));
+        }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putParcelableArray("mPickedUris", mPickedUris);
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        mPickedUris = (Uri[]) savedInstanceState.getParcelableArray("mPickedUris");
+        if (mPickedUris != null) {
+            mListView.setAdapter(new ImageAdapter(this, mPickedUris));
         }
     }
 
