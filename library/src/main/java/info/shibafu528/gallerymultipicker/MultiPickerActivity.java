@@ -187,7 +187,7 @@ public class MultiPickerActivity extends AppCompatActivity {
         mGalleryFab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent intent = new Intent(Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT ? Intent.ACTION_PICK : Intent.ACTION_GET_CONTENT);
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
                 intent.setType("image/*");
                 startActivityForResult(intent, REQUEST_GALLERY);
             }
@@ -280,6 +280,11 @@ public class MultiPickerActivity extends AppCompatActivity {
             case REQUEST_GALLERY:
                 if (resultCode == RESULT_OK) {
                     if (data.getData() != null) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT
+                                && !data.getDataString().startsWith("file://") && !data.getDataString().startsWith("content://media/")) {
+                            final int takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION;
+                            getContentResolver().takePersistableUriPermission(data.getData(), takeFlags);
+                        }
                         accept(data.getData());
                     } else {
                         Toast.makeText(this, R.string.info_shibafu528_gallerymultipicker_gallery_error, Toast.LENGTH_SHORT).show();
