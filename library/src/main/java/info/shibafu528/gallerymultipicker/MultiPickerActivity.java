@@ -36,7 +36,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Parcelable;
-import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.support.annotation.AnimRes;
 import android.support.annotation.Nullable;
@@ -45,7 +44,6 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.v4.util.LruCache;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
@@ -185,7 +183,7 @@ public class MultiPickerActivity extends AppCompatActivity {
             mCameraTemp = savedInstanceState.getParcelable(STATE_CAMERA_TEMP);
         }
 
-        mGalleryFab = (FloatingActionButton) findViewById(R.id.info_shibafu528_gallerymultipicker_action_gallery);
+        mGalleryFab = findViewById(R.id.info_shibafu528_gallerymultipicker_action_gallery);
         mGalleryFab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -194,7 +192,7 @@ public class MultiPickerActivity extends AppCompatActivity {
                 startActivityForResult(intent, REQUEST_GALLERY);
             }
         });
-        mCameraFab = (FloatingActionButton) findViewById(R.id.info_shibafu528_gallerymultipicker_action_camera);
+        mCameraFab = findViewById(R.id.info_shibafu528_gallerymultipicker_action_camera);
         mCameraFab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -221,7 +219,7 @@ public class MultiPickerActivity extends AppCompatActivity {
                 }
             }
         });
-        mDoneFab = (FloatingActionButton) findViewById(R.id.info_shibafu528_gallerymultipicker_action_done);
+        mDoneFab = findViewById(R.id.info_shibafu528_gallerymultipicker_action_done);
         mDoneFab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -235,12 +233,7 @@ public class MultiPickerActivity extends AppCompatActivity {
             ThumbnailCacheFragment fragment = ThumbnailCacheFragment.findOrCreateFragment(getSupportFragmentManager());
             mThumbnailCache = fragment.mThumbnailCache;
             if (mThumbnailCache == null) {
-                final int maxMemorySize;
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB) {
-                    maxMemorySize = 4;
-                } else {
-                    maxMemorySize = 16;
-                }
+                final int maxMemorySize = 16;
 
                 mThumbnailCache = new LruCache<Long, Bitmap>(maxMemorySize * 1024 * 1024) {
                     @Override

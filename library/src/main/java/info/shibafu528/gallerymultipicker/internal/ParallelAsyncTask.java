@@ -25,7 +25,6 @@
 package info.shibafu528.gallerymultipicker.internal;
 
 import android.os.AsyncTask;
-import android.os.Build;
 
 import java.util.concurrent.RejectedExecutionException;
 
@@ -33,11 +32,7 @@ abstract class ParallelAsyncTask<Params, Progress, Result> extends AsyncTask<Par
     public void executeParallel(Params... params) {
         if (getStatus() == Status.RUNNING && !isCancelled()) return;
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-                this.executeOnExecutor(THREAD_POOL_EXECUTOR, params);
-            } else {
-                this.execute(params);
-            }
+            this.executeOnExecutor(THREAD_POOL_EXECUTOR, params);
         } catch (RejectedExecutionException e) {
             executeParallel(params);
         }

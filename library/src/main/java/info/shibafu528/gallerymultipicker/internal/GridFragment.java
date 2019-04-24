@@ -66,7 +66,7 @@ public class GridFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.info_shibafu528_gallerymultipicker_fragment_grid, container, false);
-        gridView = (GridView) v.findViewById(android.R.id.list);
+        gridView = v.findViewById(android.R.id.list);
         return v;
     }
 
@@ -157,8 +157,8 @@ public class GridFragment extends Fragment {
         ImageView maskView;
 
         public ViewHolder(View v) {
-            imageView = (ImageView) v.findViewById(android.R.id.icon1);
-            maskView = (ImageView) v.findViewById(android.R.id.icon2);
+            imageView = v.findViewById(android.R.id.icon1);
+            maskView = v.findViewById(android.R.id.icon2);
             v.setTag(this);
         }
     }

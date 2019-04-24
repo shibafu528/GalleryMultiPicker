@@ -24,51 +24,76 @@
 
 package info.shibafu528.gallerymultipicker.sample;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Parcelable;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
+
 import info.shibafu528.gallerymultipicker.MultiPickerActivity;
 
 import java.io.FileNotFoundException;
 
 public class SampleActivity extends AppCompatActivity {
     private static final int REQUEST_PICK = 1;
+    private static final int PERMISSION_REQUEST_PICK_1 = 1;
+    private static final int PERMISSION_REQUEST_PICK_4 = 2;
 
     private ListView mListView;
     private Uri[] mPickedUris;
+
+    private Button btnPick1;
+    private Button btnPick4;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        findViewById(R.id.button).setOnClickListener(new View.OnClickListener() {
+        btnPick1 = findViewById(R.id.button);
+        btnPick1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if (ContextCompat.checkSelfPermission(SampleActivity.this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.requestPermissions(SampleActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, PERMISSION_REQUEST_PICK_1);
+                    return;
+                }
+
                 Intent intent = MultiPickerActivity.newIntent(getApplicationContext(), MultiPickerActivity.PICK_LIMIT_INFINITY);
                 startActivityForResult(intent, REQUEST_PICK);
             }
         });
-        findViewById(R.id.button2).setOnClickListener(new View.OnClickListener() {
+        btnPick4 = findViewById(R.id.button2);
+        btnPick4.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if (ContextCompat.checkSelfPermission(SampleActivity.this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.requestPermissions(SampleActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, PERMISSION_REQUEST_PICK_4);
+                    return;
+                }
+
                 Intent intent = MultiPickerActivity.newIntent(getApplicationContext(), 4);
                 startActivityForResult(intent, REQUEST_PICK);
             }
         });
 
-        mListView = (ListView) findViewById(R.id.listView);
+        mListView = findViewById(R.id.listView);
     }
 
     @Override
@@ -97,6 +122,28 @@ public class SampleActivity extends AppCompatActivity {
                 mPickedUris[i] = (Uri) pickedUris[i];
             }
             mListView.setAdapter(new ImageAdapter(this, mPickedUris));
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        switch (requestCode) {
+            case PERMISSION_REQUEST_PICK_1:
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    btnPick1.performClick();
+                } else {
+                    Toast.makeText(this, "Permission denied.", Toast.LENGTH_SHORT).show();
+                }
+                break;
+            case PERMISSION_REQUEST_PICK_4:
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    btnPick4.performClick();
+                } else {
+                    Toast.makeText(this, "Permission denied.", Toast.LENGTH_SHORT).show();
+                }
+                break;
         }
     }
 
@@ -133,8 +180,8 @@ public class SampleActivity extends AppCompatActivity {
             TextView textView;
 
             ViewHolder(View v) {
-                imageView = (ImageView) v.findViewById(R.id.imageView);
-                textView = (TextView) v.findViewById(R.id.textView);
+                imageView = v.findViewById(R.id.imageView);
+                textView = v.findViewById(R.id.textView);
             }
         }
     }

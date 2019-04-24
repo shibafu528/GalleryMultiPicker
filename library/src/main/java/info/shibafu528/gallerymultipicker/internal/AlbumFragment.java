@@ -154,9 +154,9 @@ public class AlbumFragment extends ListFragment {
         TextView count;
 
         public ViewHolder(View v) {
-            imageView = (ImageView) v.findViewById(android.R.id.icon);
-            title = (TextView) v.findViewById(android.R.id.text1);
-            count = (TextView) v.findViewById(android.R.id.text2);
+            imageView = v.findViewById(android.R.id.icon);
+            title = v.findViewById(android.R.id.text1);
+            count = v.findViewById(android.R.id.text2);
             v.setTag(this);
         }
     }
