@@ -30,6 +30,7 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
@@ -93,17 +94,19 @@ public class SampleActivity extends AppCompatActivity {
         }
     }
 
-    private class ImageAdapter extends ArrayAdapter<Uri> {
+    private static class ImageAdapter extends ArrayAdapter<Uri> {
+        private LayoutInflater inflater;
 
         public ImageAdapter(Context context, Uri[] objects) {
             super(context, 0, objects);
+            inflater = LayoutInflater.from(context);
         }
 
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
             ViewHolder holder;
             if (convertView == null) {
-                convertView = getLayoutInflater().inflate(R.layout.row, null);
+                convertView = inflater.inflate(R.layout.row, null);
                 holder = new ViewHolder(convertView);
                 convertView.setTag(holder);
             } else {
@@ -111,7 +114,7 @@ public class SampleActivity extends AppCompatActivity {
             }
             Uri uri = getItem(position);
             try {
-                holder.imageView.setImageBitmap(BitmapFactory.decodeStream(getContentResolver().openInputStream(uri)));
+                holder.imageView.setImageBitmap(BitmapFactory.decodeStream(getContext().getContentResolver().openInputStream(uri)));
             } catch (FileNotFoundException e) {
                 holder.imageView.setImageResource(android.R.drawable.ic_delete);
             }
@@ -119,7 +122,7 @@ public class SampleActivity extends AppCompatActivity {
             return convertView;
         }
 
-        private class ViewHolder {
+        private static class ViewHolder {
             ImageView imageView;
             TextView textView;
 
