@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical" android:layout_width="match_parent"
+    android:padding="1dp"
     android:layout_height="match_parent">
 
     <ImageView
@@ -16,8 +18,9 @@
         android:layout_height="match_parent"
         android:id="@android:id/icon2"
         android:layout_gravity="center"
-        android:src="#a000"
-        android:scaleType="fitXY"
+        android:background="#a000"
+        app:srcCompat="@drawable/info_shibafu528_gallerymultipicker_ic_done_36dp"
+        android:scaleType="center"
         android:visibility="invisible" />
 
 </FrameLayout>

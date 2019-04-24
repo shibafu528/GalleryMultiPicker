@@ -24,7 +24,6 @@
 
 package info.shibafu528.gallerymultipicker;
 
-import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -41,41 +40,29 @@ import android.provider.MediaStore;
 import android.support.annotation.AnimRes;
 import android.support.annotation.Nullable;
 import android.support.annotation.StringDef;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentTransaction;
-import android.support.v4.app.ListFragment;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v4.util.LruCache;
 import android.support.v7.app.ActionBar;
-import android.support.v7.app.ActionBarActivity;
-import android.text.TextUtils;
-import android.view.Display;
-import android.view.LayoutInflater;
-import android.view.Menu;
+import android.support.v7.app.AppCompatActivity;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
-import android.view.WindowManager;
-import android.widget.AdapterView;
-import android.widget.CursorAdapter;
-import android.widget.FrameLayout;
-import android.widget.GridView;
-import android.widget.ImageView;
-import android.widget.ListView;
-import android.widget.TextView;
 import android.widget.Toast;
+import info.shibafu528.gallerymultipicker.internal.AlbumFragment;
+import info.shibafu528.gallerymultipicker.internal.ThumbnailCacheFragment;
 
 import java.io.File;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-public class MultiPickerActivity extends ActionBarActivity{
+public class MultiPickerActivity extends AppCompatActivity {
     private static final int REQUEST_GALLERY    = 0;
     private static final int REQUEST_CAMERA     = 1;
+
+    private static final String STATE_SELECTED_IDS = "mSelectedIds";
+    private static final String STATE_CAMERA_TEMP = "mCameraTemp";
 
     public static final String EXTRA_PICK_LIMIT             = "max";
     public static final String EXTRA_CAMERA_DEST_DIR        = "camera_dest_dir";
@@ -92,6 +79,10 @@ public class MultiPickerActivity extends ActionBarActivity{
     public static final String ICON_THEME_LIGHT = "light";
 
     public static final int PICK_LIMIT_INFINITY = -1;
+
+    private FloatingActionButton mGalleryFab;
+    private FloatingActionButton mCameraFab;
+    private FloatingActionButton mDoneFab;
 
     private String mMenuIconTheme = null;
     private boolean mOverrideTransition;
@@ -165,6 +156,7 @@ public class MultiPickerActivity extends ActionBarActivity{
             if (themeResId > -1) {
                 setTheme(themeResId);
             }
+            mPickLimit = intent.getIntExtra(EXTRA_PICK_LIMIT, PICK_LIMIT_INFINITY);
             mCameraDestDir = intent.getStringExtra(EXTRA_CAMERA_DEST_DIR);
             mMenuIconTheme = intent.getStringExtra(EXTRA_ICON_THEME);
             mCloseEnterAnimation = intent.getIntExtra(EXTRA_CLOSE_ENTER_ANIMATION, 0);
@@ -177,16 +169,64 @@ public class MultiPickerActivity extends ActionBarActivity{
         }
         super.onCreate(savedInstanceState);
         setContentView(R.layout.info_shibafu528_gallerymultipicker_container);
+
         ActionBar actionBar = getSupportActionBar();
         actionBar.setDisplayHomeAsUpEnabled(true);
         actionBar.setDisplayShowHomeEnabled(false);
         actionBar.setTitle(R.string.info_shibafu528_gallerymultipicker_title);
         if (savedInstanceState == null) {
             getSupportFragmentManager().beginTransaction()
-                    .replace(android.R.id.content, new AlbumFragment())
+                    .replace(R.id.info_shibafu528_gallerymultipicker_container, new AlbumFragment())
                     .commit();
+        } else {
+            mSelectedIds.addAll(savedInstanceState.getLongArray(STATE_SELECTED_IDS));
+            mCameraTemp = savedInstanceState.getParcelable(STATE_CAMERA_TEMP);
         }
-        mPickLimit = getIntent().getIntExtra(EXTRA_PICK_LIMIT, PICK_LIMIT_INFINITY);
+
+        mGalleryFab = (FloatingActionButton) findViewById(R.id.info_shibafu528_gallerymultipicker_action_gallery);
+        mGalleryFab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("image/*");
+                startActivityForResult(intent, REQUEST_GALLERY);
+            }
+        });
+        mCameraFab = (FloatingActionButton) findViewById(R.id.info_shibafu528_gallerymultipicker_action_camera);
+        mCameraFab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                boolean existExternal = Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED);
+                if (!existExternal) {
+                    Toast.makeText(MultiPickerActivity.this, R.string.info_shibafu528_gallerymultipicker_storage_error, Toast.LENGTH_SHORT).show();
+                } else {
+                    File extDestDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM),
+                            mCameraDestDir != null ? mCameraDestDir : "Camera");
+                    if (!extDestDir.exists()) {
+                        extDestDir.mkdirs();
+                    }
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss");
+                    String fileName = sdf.format(new Date(System.currentTimeMillis()));
+                    File destFile = new File(extDestDir.getPath(), fileName + ".jpg");
+                    ContentValues values = new ContentValues();
+                    values.put(MediaStore.Images.Media.TITLE, fileName);
+                    values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+                    values.put(MediaStore.Images.Media.DATA, destFile.getPath());
+                    mCameraTemp = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+                    Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                    intent.putExtra(MediaStore.EXTRA_OUTPUT, mCameraTemp);
+                    startActivityForResult(intent, REQUEST_CAMERA);
+                }
+            }
+        });
+        mDoneFab = (FloatingActionButton) findViewById(R.id.info_shibafu528_gallerymultipicker_action_done);
+        mDoneFab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                accept(getSelectedUris());
+            }
+        });
+
         updateLimitCount();
 
         {
@@ -214,27 +254,8 @@ public class MultiPickerActivity extends ActionBarActivity{
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putLongArray(EXTRA_URIS, mSelectedIds.toPrimitive());
-    }
-
-    @Override
-    protected void onRestoreInstanceState(Bundle savedInstanceState) {
-        super.onRestoreInstanceState(savedInstanceState);
-        mSelectedIds.addAll(savedInstanceState.getLongArray(EXTRA_URIS));
-        updateLimitCount();
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        if (mMenuIconTheme != null) switch (mMenuIconTheme.toLowerCase()) {
-            case ICON_THEME_LIGHT:
-                getMenuInflater().inflate(R.menu.info_shibafu528_gallerymultipicker_menu_light, menu);
-                break;
-            case ICON_THEME_DARK:
-                getMenuInflater().inflate(R.menu.info_shibafu528_gallerymultipicker_menu_dark, menu);
-                break;
-        }
-        return true;
+        outState.putLongArray(STATE_SELECTED_IDS, mSelectedIds.toPrimitive());
+        outState.putParcelable(STATE_CAMERA_TEMP, mCameraTemp);
     }
 
     @Override
@@ -248,35 +269,6 @@ public class MultiPickerActivity extends ActionBarActivity{
                 setResult(RESULT_CANCELED);
                 finish();
             }
-        } else if (id == R.id.info_shibafu528_gallerymultipicker_action_decide) {
-            accept(getSelectedUris());
-        } else if (id == R.id.info_shibafu528_gallerymultipicker_action_gallery) {
-            Intent intent = new Intent(Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT ? Intent.ACTION_PICK : Intent.ACTION_GET_CONTENT);
-            intent.setType("image/*");
-            startActivityForResult(intent, REQUEST_GALLERY);
-        } else if (id == R.id.info_shibafu528_gallerymultipicker_action_take_a_photo) {
-            boolean existExternal = Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED);
-            if (!existExternal) {
-                Toast.makeText(this, R.string.info_shibafu528_gallerymultipicker_storage_error, Toast.LENGTH_SHORT).show();
-                return true;
-            } else {
-                File extDestDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM),
-                        mCameraDestDir != null ? mCameraDestDir : "Camera");
-                if (!extDestDir.exists()) {
-                    extDestDir.mkdirs();
-                }
-                SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss");
-                String fileName = sdf.format(new Date(System.currentTimeMillis()));
-                File destFile = new File(extDestDir.getPath(), fileName + ".jpg");
-                ContentValues values = new ContentValues();
-                values.put(MediaStore.Images.Media.TITLE, fileName);
-                values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
-                values.put(MediaStore.Images.Media.DATA, destFile.getPath());
-                mCameraTemp = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
-                Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                intent.putExtra(MediaStore.EXTRA_OUTPUT, mCameraTemp);
-                startActivityForResult(intent, REQUEST_CAMERA);
-            }
         }
         return true;
     }
@@ -288,6 +280,11 @@ public class MultiPickerActivity extends ActionBarActivity{
             case REQUEST_GALLERY:
                 if (resultCode == RESULT_OK) {
                     if (data.getData() != null) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT
+                                && !data.getDataString().startsWith("file://") && !data.getDataString().startsWith("content://media/")) {
+                            final int takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION;
+                            getContentResolver().takePersistableUriPermission(data.getData(), takeFlags);
+                        }
                         accept(data.getData());
                     } else {
                         Toast.makeText(this, R.string.info_shibafu528_gallerymultipicker_gallery_error, Toast.LENGTH_SHORT).show();
@@ -359,6 +356,23 @@ public class MultiPickerActivity extends ActionBarActivity{
                     getPickLimit() - getSelectedIds().size()
             ));
         }
+        if (mSelectedIds.isEmpty()) {
+            mDoneFab.hide(new FloatingActionButton.OnVisibilityChangedListener() {
+                @Override
+                public void onHidden(FloatingActionButton fab) {
+                    mGalleryFab.show();
+                    mCameraFab.show();
+                }
+            });
+        } else {
+            mGalleryFab.hide();
+            mCameraFab.hide(new FloatingActionButton.OnVisibilityChangedListener() {
+                @Override
+                public void onHidden(FloatingActionButton fab) {
+                    mDoneFab.show();
+                }
+            });
+        }
     }
 
     public boolean canInfinityPick() {
@@ -393,277 +407,4 @@ public class MultiPickerActivity extends ActionBarActivity{
         }
     }
 
-    public static class AlbumFragment extends ListFragment {
-        private static final String[] SELECT_BUCKET = {
-                MediaStore.Images.ImageColumns._ID,
-                MediaStore.Images.ImageColumns.BUCKET_ID,
-                MediaStore.Images.ImageColumns.BUCKET_DISPLAY_NAME,
-                MediaStore.Images.ImageColumns.DATA,
-                MediaStore.Images.ImageColumns.ORIENTATION,
-                "COUNT(*)"
-        };
-
-        @Override
-        public void onActivityCreated(Bundle savedInstanceState) {
-            super.onActivityCreated(savedInstanceState);
-            ContentResolver resolver = getActivity().getContentResolver();
-
-            Cursor cursor = resolver.query(
-                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI, null, null, null,
-                    MediaStore.Images.Media.DATE_MODIFIED + " DESC"
-            );
-            View view = getActivity().getLayoutInflater().inflate(R.layout.info_shibafu528_gallerymultipicker_row_album, null);
-            ViewHolder vh = new ViewHolder(view);
-            if (cursor.moveToFirst()) {
-                long id = cursor.getLong(cursor.getColumnIndex(MediaStore.Images.Media._ID));
-                int orientation = cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns.ORIENTATION));
-                vh.imageView.setImageResource(android.R.drawable.ic_popup_sync);
-                ThumbnailAsyncTask.execute(vh.imageView, String.valueOf(id),
-                        ((MultiPickerActivity) getActivity()).getThumbnailCache(),
-                        new ThumbnailAsyncTask.ThumbParam(resolver, id, orientation));
-            } else {
-                vh.imageView.setImageResource(android.R.drawable.gallery_thumb);
-            }
-            vh.title.setText(R.string.info_shibafu528_gallerymultipicker_all_images);
-            vh.count.setText(String.valueOf(cursor.getCount()));
-            cursor.close();
-            getListView().addHeaderView(view);
-
-            setListAdapter(new AlbumAdapter(getActivity(),
-                    resolver.query(
-                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                            SELECT_BUCKET,
-                            "1) GROUP BY (2",
-                            null,
-                            "MAX(datetaken) DESC"),
-                    resolver));
-            getListView().setFastScrollEnabled(true);
-        }
-
-        @Override
-        public void onDestroyView() {
-            setListAdapter(null);
-            super.onDestroyView();
-        }
-
-        @Override
-        public void onListItemClick(ListView l, View v, int position, long id) {
-            String bucketId = null;
-            if (position-- > 0) {
-                Cursor c = (Cursor) getListAdapter().getItem(position);
-                bucketId = c.getString(c.getColumnIndex(MediaStore.Images.ImageColumns.BUCKET_ID));
-            }
-            FragmentTransaction transaction = getActivity().getSupportFragmentManager().beginTransaction();
-            transaction
-                    .setCustomAnimations(
-                            R.anim.info_shibafu528_gallerymultipicker_open_enter,
-                            R.anim.info_shibafu528_gallerymultipicker_open_exit,
-                            R.anim.info_shibafu528_gallerymultipicker_close_enter,
-                            R.anim.info_shibafu528_gallerymultipicker_close_exit)
-                    .replace(android.R.id.content, GridFragment.newInstance(bucketId))
-                    .addToBackStack(null)
-                    .commit();
-        }
-
-        private class AlbumAdapter extends CursorAdapter {
-            private ContentResolver resolver;
-            private LayoutInflater inflater;
-
-            public AlbumAdapter(Context context, Cursor c, ContentResolver cr) {
-                super(context, c, false);
-                this.resolver = cr;
-                this.inflater = (LayoutInflater) context.getSystemService(LAYOUT_INFLATER_SERVICE);
-            }
-
-            @Override
-            public View newView(Context context, Cursor cursor, ViewGroup parent) {
-                View v = inflater.inflate(R.layout.info_shibafu528_gallerymultipicker_row_album, null);
-                ViewHolder vh = new ViewHolder(v);
-                bindExistView(vh, context, cursor);
-                return v;
-            }
-
-            @Override
-            public void bindView(View view, Context context, Cursor cursor) {
-                bindExistView((ViewHolder) view.getTag(), context, cursor);
-            }
-
-            public void bindExistView(ViewHolder vh, Context context, Cursor cursor) {
-                long id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns._ID));
-                int orientation = cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns.ORIENTATION));
-                vh.imageView.setImageResource(android.R.drawable.ic_popup_sync);
-                ThumbnailAsyncTask.execute(vh.imageView, String.valueOf(id),
-                        ((MultiPickerActivity) getActivity()).getThumbnailCache(),
-                        new ThumbnailAsyncTask.ThumbParam(resolver, id, orientation));
-                vh.title.setText(cursor.getString(cursor.getColumnIndex(MediaStore.Images.ImageColumns.BUCKET_DISPLAY_NAME)));
-                vh.count.setText(cursor.getString(cursor.getColumnIndex("COUNT(*)")));
-            }
-        }
-
-        private class ViewHolder {
-            ImageView imageView;
-            TextView title;
-            TextView count;
-
-            public ViewHolder(View v) {
-                imageView = (ImageView) v.findViewById(android.R.id.icon);
-                title = (TextView) v.findViewById(android.R.id.text1);
-                count = (TextView) v.findViewById(android.R.id.text2);
-                v.setTag(this);
-            }
-        }
-    }
-
-    public static class GridFragment extends Fragment {
-        private static final String ARGV_BUCKET_ID = "bucket_id";
-
-        private GridView gridView;
-
-        private ContentAdapter adapter;
-
-        public static GridFragment newInstance(String bucketId) {
-            GridFragment fragment = new GridFragment();
-            Bundle args = new Bundle();
-            args.putString(ARGV_BUCKET_ID, bucketId);
-            fragment.setArguments(args);
-            return fragment;
-        }
-
-        public GridFragment() {
-            setRetainInstance(true);
-        }
-
-        @Override
-        public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-            View v = inflater.inflate(R.layout.info_shibafu528_gallerymultipicker_fragment_grid, container, false);
-            gridView = (GridView) v.findViewById(android.R.id.list);
-            return v;
-        }
-
-        @Override
-        public void onActivityCreated(Bundle savedInstanceState) {
-            super.onActivityCreated(savedInstanceState);
-            ContentResolver resolver = getActivity().getContentResolver();
-            String bucketId = getArguments().getString(ARGV_BUCKET_ID);
-            Cursor cursor;
-            if (TextUtils.isEmpty(bucketId)) {
-                cursor = resolver.query(
-                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI, null, null, null,
-                        MediaStore.Images.Media.DATE_MODIFIED + " DESC"
-                );
-            } else {
-                cursor = resolver.query(
-                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI, null,
-                        MediaStore.Images.Media.BUCKET_ID + "=?",
-                        new String[]{bucketId},
-                        MediaStore.Images.Media.DATE_MODIFIED + " DESC"
-                );
-            }
-            adapter = new ContentAdapter(getActivity(), cursor, resolver);
-            gridView.setAdapter(adapter);
-            gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                @Override
-                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                    ((MultiPickerActivity) getActivity()).toggleSelect(id);
-                    ContentAdapter.ViewHolder vh = (ContentAdapter.ViewHolder) view.getTag();
-                    if (vh != null) {
-                        vh.maskView.setVisibility(((MultiPickerActivity) getActivity()).getSelectedIds().contains(id) ? View.VISIBLE : View.INVISIBLE);
-                    }
-                    ((MultiPickerActivity) getActivity()).updateLimitCount();
-                }
-            });
-        }
-
-        public void notifyDataSetChanged() {
-            adapter.notifyDataSetChanged();
-        }
-
-        private class ContentAdapter extends CursorAdapter {
-            private ContentResolver resolver;
-            private LayoutInflater inflater;
-
-            public ContentAdapter(Context context, Cursor c, ContentResolver cr) {
-                super(context, c, false);
-                this.resolver = cr;
-                this.inflater = (LayoutInflater) context.getSystemService(LAYOUT_INFLATER_SERVICE);
-            }
-
-            @Override
-            public View newView(Context context, Cursor cursor, ViewGroup parent) {
-                View v = inflater.inflate(R.layout.info_shibafu528_gallerymultipicker_row_picture, null);
-                ViewHolder vh = new ViewHolder(v);
-                {
-                    int columns = context.getResources().getInteger(R.integer.info_shibafu528_gallerymultipicker_grid_columns_num);
-                    WindowManager wm = (WindowManager) context.getSystemService(WINDOW_SERVICE);
-                    Display display = wm.getDefaultDisplay();
-                    FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(display.getWidth() / columns, display.getWidth() / columns);
-                    vh.imageView.setLayoutParams(params);
-                    vh.maskView.setLayoutParams(params);
-                }
-                bindExistView(vh, context, cursor);
-                return v;
-            }
-
-            @Override
-            public void bindView(View view, Context context, Cursor cursor) {
-                bindExistView((ViewHolder) view.getTag(), context, cursor);
-            }
-
-            public void bindExistView(ViewHolder vh, Context context, Cursor cursor) {
-                long id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID));
-                int orientation = cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns.ORIENTATION));
-                vh.imageView.setImageResource(android.R.drawable.ic_popup_sync);
-                ThumbnailAsyncTask.execute(vh.imageView, String.valueOf(id),
-                        ((MultiPickerActivity) getActivity()).getThumbnailCache(),
-                        new ThumbnailAsyncTask.ThumbParam(resolver, id, orientation));
-                vh.maskView.setVisibility(((MultiPickerActivity) getActivity()).getSelectedIds().contains(id) ? View.VISIBLE : View.INVISIBLE);
-            }
-
-            private class ViewHolder {
-                ImageView imageView;
-                ImageView maskView;
-
-                public ViewHolder(View v) {
-                    imageView = (ImageView) v.findViewById(android.R.id.icon1);
-                    maskView = (ImageView) v.findViewById(android.R.id.icon2);
-                    v.setTag(this);
-                }
-            }
-        }
-    }
-
-    public static class ThumbnailCacheFragment extends Fragment {
-        public static final String TAG = "ThumbnailCache";
-
-        public LruCache<Long, Bitmap> mThumbnailCache;
-
-        public ThumbnailCacheFragment() {
-            setRetainInstance(true);
-        }
-
-        public static ThumbnailCacheFragment findOrCreateFragment(FragmentManager manager) {
-            ThumbnailCacheFragment fragment = (ThumbnailCacheFragment) manager.findFragmentByTag(TAG);
-            if (fragment == null) {
-                fragment = new ThumbnailCacheFragment();
-                manager.beginTransaction().add(fragment, TAG).commit();
-            }
-            return fragment;
-        }
-    }
-
-    private static class LongArray extends ArrayList<Long> {
-        public long[] toPrimitive() {
-            final long[] result = new long[size()];
-            for (int i = 0; i < result.length; i++) {
-                result[i] = get(i);
-            }
-            return result;
-        }
-
-        public void addAll(long[] values) {
-            if (values != null) for (long value : values) {
-                add(value);
-            }
-        }
-    }
 }

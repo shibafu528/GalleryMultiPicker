@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2014 shibafu
+ * Copyright (c) 2016 shibafu
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,7 @@
  * THE SOFTWARE.
  */
 
-package info.shibafu528.gallerymultipicker;
+package info.shibafu528.gallerymultipicker.internal;
 
 import android.content.ContentResolver;
 import android.graphics.Bitmap;

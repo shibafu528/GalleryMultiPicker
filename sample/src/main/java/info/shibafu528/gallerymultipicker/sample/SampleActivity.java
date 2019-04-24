@@ -29,22 +29,22 @@ import android.content.Intent;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.v7.app.ActionBarActivity;
+import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
+import info.shibafu528.gallerymultipicker.MultiPickerActivity;
 
 import java.io.FileNotFoundException;
 
-import info.shibafu528.gallerymultipicker.MultiPickerActivity;
-
-public class SampleActivity extends ActionBarActivity{
+public class SampleActivity extends AppCompatActivity {
     private static final int REQUEST_PICK = 1;
 
     private ListView mListView;
+    private Uri[] mPickedUris;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,8 +73,23 @@ public class SampleActivity extends ActionBarActivity{
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_PICK && resultCode == RESULT_OK) {
-            Uri[] pickedUris = MultiPickerActivity.getPickedUris(data);
-            mListView.setAdapter(new ImageAdapter(this, pickedUris));
+            mPickedUris = MultiPickerActivity.getPickedUris(data);
+            mListView.setAdapter(new ImageAdapter(this, mPickedUris));
+        }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putParcelableArray("mPickedUris", mPickedUris);
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        mPickedUris = (Uri[]) savedInstanceState.getParcelableArray("mPickedUris");
+        if (mPickedUris != null) {
+            mListView.setAdapter(new ImageAdapter(this, mPickedUris));
         }
     }
 
