@@ -36,6 +36,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Parcelable;
+import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.support.annotation.AnimRes;
 import android.support.annotation.Nullable;
@@ -44,6 +45,7 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.v4.util.LruCache;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
@@ -283,7 +285,9 @@ public class MultiPickerActivity extends AppCompatActivity {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT
                                 && !data.getDataString().startsWith("file://") && !data.getDataString().startsWith("content://media/")) {
                             final int takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION;
-                            getContentResolver().takePersistableUriPermission(data.getData(), takeFlags);
+                            try {
+                                getContentResolver().takePersistableUriPermission(data.getData(), takeFlags);
+                            } catch (SecurityException ignored) {}
                         }
                         accept(data.getData());
                     } else {
