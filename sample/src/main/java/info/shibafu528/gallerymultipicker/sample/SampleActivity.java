@@ -29,6 +29,7 @@ import android.content.Intent;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.support.v7.app.AppCompatActivity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -88,8 +89,13 @@ public class SampleActivity extends AppCompatActivity {
     @Override
     protected void onRestoreInstanceState(Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
-        mPickedUris = (Uri[]) savedInstanceState.getParcelableArray("mPickedUris");
-        if (mPickedUris != null) {
+
+        Parcelable[] pickedUris = savedInstanceState.getParcelableArray("mPickedUris");
+        if (pickedUris != null) {
+            mPickedUris = new Uri[pickedUris.length];
+            for (int i = 0; i < pickedUris.length; i++) {
+                mPickedUris[i] = (Uri) pickedUris[i];
+            }
             mListView.setAdapter(new ImageAdapter(this, mPickedUris));
         }
     }
