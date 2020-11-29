@@ -27,17 +27,29 @@ package info.shibafu528.gallerymultipicker.internal;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.ListFragment;
+import android.support.v4.util.ArraySet;
+import android.support.v4.util.LruCache;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.CursorAdapter;
 import android.widget.ImageView;
+import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
+
+import java.util.ArrayList;
+import java.util.List;
+
 import info.shibafu528.gallerymultipicker.MultiPickerActivity;
 import info.shibafu528.gallerymultipicker.R;
 
@@ -77,14 +89,19 @@ public class AlbumFragment extends ListFragment {
         cursor.close();
         getListView().addHeaderView(view);
 
-        setListAdapter(new AlbumAdapter(getActivity(),
-                resolver.query(
-                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                        SELECT_BUCKET,
-                        "1) GROUP BY (2",
-                        null,
-                        "MAX(datetaken) DESC"),
-                resolver));
+        ListAdapter adapter;
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+            Cursor c = resolver.query(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    SELECT_BUCKET,
+                    "1) GROUP BY (2",
+                    null,
+                    "MAX(datetaken) DESC");
+            adapter = new AlbumAdapter(getActivity(), c, resolver);
+        } else {
+            adapter = LawfulAlbumAdapter.newInstance(getActivity(), resolver, ((MultiPickerActivity) getActivity()).getThumbnailCache());
+        }
+        setListAdapter(adapter);
         getListView().setFastScrollEnabled(true);
     }
 
@@ -98,8 +115,7 @@ public class AlbumFragment extends ListFragment {
     public void onListItemClick(ListView l, View v, int position, long id) {
         String bucketId = null;
         if (position-- > 0) {
-            Cursor c = (Cursor) getListAdapter().getItem(position);
-            bucketId = c.getString(c.getColumnIndex(MediaStore.Images.ImageColumns.BUCKET_ID));
+            bucketId = ((BucketIdAdapter) getListAdapter()).getBucketId(position);
         }
         FragmentTransaction transaction = getActivity().getSupportFragmentManager().beginTransaction();
         transaction
@@ -113,7 +129,11 @@ public class AlbumFragment extends ListFragment {
                 .commit();
     }
 
-    private class AlbumAdapter extends CursorAdapter {
+    private interface BucketIdAdapter {
+        String getBucketId(int position);
+    }
+
+    private class AlbumAdapter extends CursorAdapter implements BucketIdAdapter {
         private ContentResolver resolver;
         private LayoutInflater inflater;
 
@@ -145,6 +165,143 @@ public class AlbumFragment extends ListFragment {
                     new ThumbnailAsyncTask.ThumbParam(resolver, id, orientation));
             vh.title.setText(cursor.getString(cursor.getColumnIndex(MediaStore.Images.ImageColumns.BUCKET_DISPLAY_NAME)));
             vh.count.setText(cursor.getString(cursor.getColumnIndex("COUNT(*)")));
+        }
+
+        @Override
+        public String getBucketId(int position) {
+            Cursor c = (Cursor) getListAdapter().getItem(position);
+            return c.getString(c.getColumnIndex(MediaStore.Images.ImageColumns.BUCKET_ID));
+        }
+    }
+
+    private static class LawfulAlbumAdapter extends ArrayAdapter<AlbumSummary> implements BucketIdAdapter {
+        public static final String[] SELECT_IMAGE_AND_BUCKET = {
+                MediaStore.Images.ImageColumns._ID,
+                MediaStore.Images.ImageColumns.ORIENTATION,
+                MediaStore.Images.ImageColumns.BUCKET_ID,
+                MediaStore.Images.ImageColumns.BUCKET_DISPLAY_NAME,
+                MediaStore.Images.ImageColumns.DATE_TAKEN
+        };
+        public static final String[] SELECT_ONLY_ID = {MediaStore.Images.ImageColumns._ID};
+
+        @NonNull
+        private final ContentResolver resolver;
+        @NonNull
+        private final LayoutInflater inflater;
+        @NonNull
+        private final LruCache<Long, Bitmap> thumbnailCache;
+
+        public static LawfulAlbumAdapter newInstance(@NonNull Context context, @NonNull ContentResolver cr, @NonNull LruCache<Long, Bitmap> thumbnailCache) {
+            ArrayList<AlbumSummary> summaries = new ArrayList<>();
+            ArraySet<String> summarizedBucketIds = new ArraySet<>();
+
+            Cursor cursor = cr.query(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    SELECT_IMAGE_AND_BUCKET,
+                    null,
+                    null,
+                    MediaStore.Images.ImageColumns.DATE_TAKEN + " DESC");
+            if (cursor != null && cursor.moveToFirst()) {
+                try {
+                    int columnId = cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns._ID);
+                    int columnOrientation = cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns.ORIENTATION);
+                    int columnBucketId = cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns.BUCKET_ID);
+                    int columnBucketName = cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns.BUCKET_DISPLAY_NAME);
+
+                    do {
+                        String bucketId = cursor.getString(columnBucketId);
+                        String bucketName = cursor.getString(columnBucketName);
+
+                        if (!summarizedBucketIds.contains(bucketId)) {
+                            long count = countInBucket(cr, bucketId);
+                            long latestImageId = cursor.getLong(columnId);
+                            int latestImageOrientation = cursor.getInt(columnOrientation);
+
+                            summaries.add(new AlbumSummary(bucketId, bucketName, count, latestImageId, latestImageOrientation));
+                            summarizedBucketIds.add(bucketId);
+                        }
+                    } while (cursor.moveToNext());
+                } finally {
+                    cursor.close();
+                }
+            }
+
+            return new LawfulAlbumAdapter(context, cr, thumbnailCache, summaries);
+        }
+
+        private static long countInBucket(@NonNull ContentResolver cr, @NonNull String bucketId) {
+            Cursor cursor = cr.query(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    SELECT_ONLY_ID,
+                    MediaStore.Images.ImageColumns.BUCKET_ID + "=?",
+                    new String[]{bucketId},
+                    null);
+
+            if (cursor != null && cursor.moveToFirst()) {
+                try {
+                    return cursor.getCount();
+                } finally {
+                    cursor.close();
+                }
+            }
+
+            return 0;
+        }
+
+        public LawfulAlbumAdapter(@NonNull Context context, @NonNull ContentResolver cr, @NonNull LruCache<Long, Bitmap> thumbnailCache, @NonNull List<AlbumSummary> objects) {
+            super(context, 0, objects);
+            this.resolver = cr;
+            this.inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+            this.thumbnailCache = thumbnailCache;
+        }
+
+        @NonNull
+        @Override
+        public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+            View v = convertView;
+            ViewHolder vh;
+
+            if (v == null) {
+                v = inflater.inflate(R.layout.info_shibafu528_gallerymultipicker_row_album, parent, false);
+                vh = new ViewHolder(v);
+                v.setTag(vh);
+            } else {
+                vh = (ViewHolder) v.getTag();
+            }
+
+            AlbumSummary summary = getItem(position);
+            if (summary != null) {
+                vh.imageView.setImageResource(android.R.drawable.ic_popup_sync);
+                ThumbnailAsyncTask.execute(vh.imageView, String.valueOf(summary.latestImageId), thumbnailCache,
+                        new ThumbnailAsyncTask.ThumbParam(resolver, summary.latestImageId, summary.latestImageOrientation));
+                vh.title.setText(summary.displayName);
+                vh.count.setText(summary.countString);
+            }
+
+            return v;
+        }
+
+        @Override
+        public String getBucketId(int position) {
+            return getItem(position).bucketId;
+        }
+    }
+
+    private static class AlbumSummary {
+        final String bucketId;
+        final String displayName;
+        final long count;
+        final String countString;
+        final long latestImageId;
+        final int latestImageOrientation;
+
+        private AlbumSummary(String bucketId, String displayName, long count, long latestImageId, int latestImageOrientation) {
+            this.bucketId = bucketId;
+            this.displayName = displayName;
+            this.count = count;
+            this.countString = String.valueOf(count);
+            this.latestImageId = latestImageId;
+            this.latestImageOrientation = latestImageOrientation;
         }
     }
 
