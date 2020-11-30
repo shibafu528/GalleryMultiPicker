@@ -120,7 +120,9 @@ public class AlbumFragment extends ListFragment implements AlbumSummaryAsyncTask
     @Override
     public void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putParcelableArrayList(STATE_ALBUM_SUMMARIES, new ArrayList<>(mAlbumSummaries));
+        if (mAlbumSummaries != null) {
+            outState.putParcelableArrayList(STATE_ALBUM_SUMMARIES, new ArrayList<>(mAlbumSummaries));
+        }
     }
 
     @Override
