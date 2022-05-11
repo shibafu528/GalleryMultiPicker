@@ -8,7 +8,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
 
-    <android.support.design.widget.FloatingActionButton
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
         style="@style/GalleryMultiPicker_FabStyle"
         android:id="@+id/info_shibafu528_gallerymultipicker_action_gallery"
         android:layout_width="wrap_content"
@@ -20,7 +20,7 @@
         app:fabSize="normal"
         app:borderWidth="0dp"/>
 
-    <android.support.design.widget.FloatingActionButton
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
         style="@style/GalleryMultiPicker_FabStyle"
         android:id="@+id/info_shibafu528_gallerymultipicker_action_camera"
         android:layout_width="wrap_content"
@@ -32,7 +32,7 @@
         app:fabSize="normal"
         app:borderWidth="0dp"/>
 
-    <android.support.design.widget.FloatingActionButton
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
         style="@style/GalleryMultiPicker_FabStyle"
         android:id="@+id/info_shibafu528_gallerymultipicker_action_done"
         android:layout_width="wrap_content"
