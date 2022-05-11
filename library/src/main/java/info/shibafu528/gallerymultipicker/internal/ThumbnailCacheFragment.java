@@ -25,9 +25,9 @@
 package info.shibafu528.gallerymultipicker.internal;
 
 import android.graphics.Bitmap;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.util.LruCache;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.collection.LruCache;
 
 public class ThumbnailCacheFragment extends Fragment {
     public static final String TAG = "ThumbnailCache";
