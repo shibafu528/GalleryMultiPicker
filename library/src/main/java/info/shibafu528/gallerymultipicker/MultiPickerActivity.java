@@ -56,6 +56,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class MultiPickerActivity extends AppCompatActivity {
     private static final int REQUEST_GALLERY    = 0;
@@ -196,22 +197,42 @@ public class MultiPickerActivity extends AppCompatActivity {
         mCameraFab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                boolean existExternal = Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED);
-                if (!existExternal) {
-                    Toast.makeText(MultiPickerActivity.this, R.string.info_shibafu528_gallerymultipicker_storage_error, Toast.LENGTH_SHORT).show();
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                    boolean existExternal = Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED);
+                    if (!existExternal) {
+                        Toast.makeText(MultiPickerActivity.this, R.string.info_shibafu528_gallerymultipicker_storage_error, Toast.LENGTH_SHORT).show();
+                    } else {
+                        File extDestDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM),
+                                mCameraDestDir != null ? mCameraDestDir : "Camera");
+                        if (!extDestDir.exists()) {
+                            extDestDir.mkdirs();
+                        }
+                        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss");
+                        String fileName = sdf.format(new Date(System.currentTimeMillis()));
+                        File destFile = new File(extDestDir.getPath(), fileName + ".jpg");
+                        ContentValues values = new ContentValues();
+                        values.put(MediaStore.Images.Media.TITLE, fileName);
+                        values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+                        values.put(MediaStore.Images.Media.DATA, destFile.getPath());
+                        mCameraTemp = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+                        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                        intent.putExtra(MediaStore.EXTRA_OUTPUT, mCameraTemp);
+                        startActivityForResult(intent, REQUEST_CAMERA);
+                    }
                 } else {
-                    File extDestDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM),
-                            mCameraDestDir != null ? mCameraDestDir : "Camera");
-                    if (!extDestDir.exists()) {
-                        extDestDir.mkdirs();
+                    String relativePath;
+                    if (mCameraDestDir == null || mCameraDestDir.isEmpty()) {
+                        relativePath = "DCIM/Camera";
+                    } else {
+                        relativePath = "DCIM/" + mCameraDestDir;
                     }
                     SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss");
                     String fileName = sdf.format(new Date(System.currentTimeMillis()));
-                    File destFile = new File(extDestDir.getPath(), fileName + ".jpg");
                     ContentValues values = new ContentValues();
                     values.put(MediaStore.Images.Media.TITLE, fileName);
                     values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
-                    values.put(MediaStore.Images.Media.DATA, destFile.getPath());
+                    values.put(MediaStore.Images.Media.DISPLAY_NAME, fileName + ".jpg");
+                    values.put(MediaStore.Images.Media.RELATIVE_PATH, relativePath);
                     mCameraTemp = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
                     Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
                     intent.putExtra(MediaStore.EXTRA_OUTPUT, mCameraTemp);
