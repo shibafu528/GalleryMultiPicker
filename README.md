@@ -1,6 +1,10 @@
 Gallery Multi Picker
 ========
 
+> [!CAUTION]
+> Deprecated! This library is no longer maintained.  
+> Please consider using official [photo picker](https://developer.android.com/training/data-storage/shared/photo-picker) instead.
+
 ギャラリーから複数の画像を取得するActivityのライブラリです。
 Twitterクライアントで複数添付を行うために作ったものをライブラリ化しました。
 
